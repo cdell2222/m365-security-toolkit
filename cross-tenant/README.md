@@ -51,6 +51,27 @@ Exchange only, if you can't consent to the Graph scope:
 - Exchange: **View-Only Organization Management** is enough
 - Graph: **Policy.Read.All** — read-only
 
+## Known issue: `Method not found ... WithLogging`
+
+If `Connect-MgGraph` fails with:
+
+```
+InteractiveBrowserCredential authentication failed: Method not found:
+'... BaseAbstractApplicationBuilder`1.WithLogging(...IIdentityLogger, Boolean)'
+```
+
+That's not your tenant. `ExchangeOnlineManagement` and `Microsoft.Graph` each ship their own version of MSAL, and whichever loads first wins for the whole session. If Exchange loads first, Graph breaks.
+
+The script connects to Graph first to avoid this. But if you've already run `Connect-ExchangeOnline` in the same window, the older library is already loaded. Open a **fresh PowerShell 7 window** and run the script there.
+
+If it still fails, update both modules so their MSAL versions line up:
+
+```powershell
+Update-Module Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns, ExchangeOnlineManagement
+```
+
+Or skip the Graph check entirely with `-SkipGraph`.
+
 ## How the tenant check works
 
 Organization relationships are keyed by **domain**. Cross-Tenant Access Policy is keyed by **tenant ID**. You can't compare them directly.

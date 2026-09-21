@@ -92,19 +92,41 @@ function Get-Finding {
 }
 
 # --- connect ---------------------------------------------------------------
-
-if (-not (Get-ConnectionInformation -ErrorAction SilentlyContinue)) {
-    Write-Host 'Connecting to Exchange Online...' -ForegroundColor Cyan
-    Connect-ExchangeOnline -ShowBanner:$false
-}
+#
+# Graph FIRST, then Exchange. Order matters.
+#
+# ExchangeOnlineManagement and Microsoft.Graph each ship their own version of MSAL
+# (Microsoft.Identity.Client.dll). Whichever loads first wins for the whole session.
+# Loading Exchange first commonly breaks Connect-MgGraph with:
+#   "Method not found ... BaseAbstractApplicationBuilder`1.WithLogging(...)"
+# Loading Graph first avoids it - but only in a fresh session. If Exchange is already
+# loaded in this window, open a new PowerShell 7 session and run the script there.
 
 $ctapPartners = @{}
 if (-not $SkipGraph) {
     Write-Host 'Connecting to Microsoft Graph (Policy.Read.All)...' -ForegroundColor Cyan
-    Connect-MgGraph -Scopes 'Policy.Read.All' -NoWelcome
+    try {
+        Connect-MgGraph -Scopes 'Policy.Read.All' -NoWelcome
+    }
+    catch {
+        if ($_.Exception.Message -match 'Method not found') {
+            Write-Host ''
+            Write-Host 'Graph could not load its authentication library.' -ForegroundColor Red
+            Write-Host 'Exchange Online is already loaded in this session with an older MSAL version.' -ForegroundColor Yellow
+            Write-Host 'Fix: open a NEW PowerShell 7 window and run the script there.' -ForegroundColor Yellow
+            Write-Host 'Or run it with -SkipGraph for an Exchange-only inventory.' -ForegroundColor Yellow
+            return
+        }
+        throw
+    }
     foreach ($p in Get-MgPolicyCrossTenantAccessPolicyPartner -All) {
         $ctapPartners[$p.TenantId] = $p
     }
+}
+
+if (-not (Get-ConnectionInformation -ErrorAction SilentlyContinue)) {
+    Write-Host 'Connecting to Exchange Online...' -ForegroundColor Cyan
+    Connect-ExchangeOnline -ShowBanner:$false
 }
 
 # --- collect ---------------------------------------------------------------
