@@ -87,7 +87,7 @@ Or skip the Graph check entirely with `-SkipGraph`.
 
 ExchangeOnlineManagement 3.7+ signs in through the Windows authentication broker (WAM). When there's no usable console window — `pwsh` launched from another shell, some terminals, remote sessions — it fails with `Object reference not set to an instance of an object` inside `RuntimeBroker..ctor`.
 
-The script catches this and retries with `-DisableWAM`, which uses the normal browser sign-in. On older module versions without that switch, run `Update-Module ExchangeOnlineManagement`.
+The script avoids this by always connecting with `-DisableWAM`, which uses the normal browser sign-in. If your module version is too old to have that switch and you hit this error, run `Update-Module ExchangeOnlineManagement`.
 
 ## How the tenant check works
 

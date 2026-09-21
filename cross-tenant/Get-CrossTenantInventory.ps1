@@ -126,18 +126,16 @@ if (-not $SkipGraph) {
 
 if (-not (Get-ConnectionInformation -ErrorAction SilentlyContinue)) {
     Write-Host 'Connecting to Exchange Online...' -ForegroundColor Cyan
-    try {
-        Connect-ExchangeOnline -ShowBanner:$false
+    # ExchangeOnlineManagement 3.7+ signs in through the Windows broker (WAM) by default.
+    # With Graph's MSAL already loaded, or without a usable console window (nested pwsh,
+    # some terminals, remote sessions), the broker crashes with a NullReferenceException
+    # that doesn't reliably surface as a catchable error. So skip it: -DisableWAM uses
+    # the normal browser sign-in, which works everywhere.
+    $exoParams = @{ ShowBanner = $false }
+    if ((Get-Command Connect-ExchangeOnline).Parameters.ContainsKey('DisableWAM')) {
+        $exoParams.DisableWAM = $true
     }
-    catch {
-        # ExchangeOnlineManagement 3.7+ signs in through the Windows broker (WAM), which
-        # throws a NullReferenceException when there's no usable console window - nested
-        # pwsh, some terminals, remote sessions. Fall back to the normal browser sign-in.
-        $canDisableWam = (Get-Command Connect-ExchangeOnline).Parameters.ContainsKey('DisableWAM')
-        if (-not $canDisableWam) { throw }
-        Write-Host 'Windows sign-in broker failed - retrying with browser sign-in...' -ForegroundColor Yellow
-        Connect-ExchangeOnline -ShowBanner:$false -DisableWAM
-    }
+    Connect-ExchangeOnline @exoParams
 }
 
 # --- collect ---------------------------------------------------------------
