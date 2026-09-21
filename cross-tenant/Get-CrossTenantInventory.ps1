@@ -126,7 +126,18 @@ if (-not $SkipGraph) {
 
 if (-not (Get-ConnectionInformation -ErrorAction SilentlyContinue)) {
     Write-Host 'Connecting to Exchange Online...' -ForegroundColor Cyan
-    Connect-ExchangeOnline -ShowBanner:$false
+    try {
+        Connect-ExchangeOnline -ShowBanner:$false
+    }
+    catch {
+        # ExchangeOnlineManagement 3.7+ signs in through the Windows broker (WAM), which
+        # throws a NullReferenceException when there's no usable console window - nested
+        # pwsh, some terminals, remote sessions. Fall back to the normal browser sign-in.
+        $canDisableWam = (Get-Command Connect-ExchangeOnline).Parameters.ContainsKey('DisableWAM')
+        if (-not $canDisableWam) { throw }
+        Write-Host 'Windows sign-in broker failed - retrying with browser sign-in...' -ForegroundColor Yellow
+        Connect-ExchangeOnline -ShowBanner:$false -DisableWAM
+    }
 }
 
 # --- collect ---------------------------------------------------------------

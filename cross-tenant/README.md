@@ -83,6 +83,12 @@ Update-Module Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns, 
 
 Or skip the Graph check entirely with `-SkipGraph`.
 
+## Known issue: `NullReferenceException` at `RuntimeBroker`
+
+ExchangeOnlineManagement 3.7+ signs in through the Windows authentication broker (WAM). When there's no usable console window — `pwsh` launched from another shell, some terminals, remote sessions — it fails with `Object reference not set to an instance of an object` inside `RuntimeBroker..ctor`.
+
+The script catches this and retries with `-DisableWAM`, which uses the normal browser sign-in. On older module versions without that switch, run `Update-Module ExchangeOnlineManagement`.
+
 ## How the tenant check works
 
 Organization relationships are keyed by **domain**. Cross-Tenant Access Policy is keyed by **tenant ID**. You can't compare them directly.
