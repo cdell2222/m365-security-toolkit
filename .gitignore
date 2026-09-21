@@ -1,0 +1,19 @@
+# Never commit tenant output or credentials
+*.csv
+*.json
+*.xlsx
+*.html
+reports/
+output/
+*.pfx
+*.cer
+*.pem
+*.key
+*.secret
+tenants.*
+
+# Local noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
