@@ -9,6 +9,7 @@ Each one solves a specific problem I've run into in real environments — tenant
 | Folder | Tool | What it's for |
 |---|---|---|
 | [`cross-tenant/`](cross-tenant/) | `Get-CrossTenantInventory.ps1` | Inventory organization relationships before cross-tenant Free/Busy moves to Entra Cross-Tenant Access Policy. Flags stale partners and missing CTAP entries. |
+| [`cross-tenant/`](cross-tenant/) | `Get-CrossTenantAccessReview.ps1` | Review Entra Cross-Tenant Access Policy: guest and Teams shared-channel access, trusted external MFA and devices, cross-tenant sync, dead partner entries. |
 
 More get added over time.
 
