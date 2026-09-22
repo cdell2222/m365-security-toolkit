@@ -11,7 +11,7 @@ Two read-only scripts covering how other tenants reach into yours.
 
 # Cross-tenant inventory
 
-Microsoft is moving cross-tenant Free/Busy, MailTips and calendar sharing out of Exchange organization relationships and into **Entra ID Cross-Tenant Access Policy**.
+Microsoft is moving cross-tenant Free/Busy, MailTips and calendar sharing out of Exchange organization relationships and into **Entra ID Cross-Tenant Access Policy** ([Exchange Team Blog, 11 Sep 2026](https://techcommunity.microsoft.com/t5/exchange-team-blog/cross-tenant-free-busy-mailtips-and-calendar-sharing-are-moving/ba-p/4545169), rolling out in stages).
 
 Good change. It should have lived there all along — deciding which tenant can see your calendars is an identity trust decision, not a mail routing one.
 
