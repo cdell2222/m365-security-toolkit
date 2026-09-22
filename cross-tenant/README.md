@@ -46,7 +46,7 @@ Write the results to CSV:
 Only the things that need a look:
 
 ```powershell
-./Get-CrossTenantInventory.ps1 | Where-Object Finding -notmatch '^(OK|HYBRID)'
+./Get-CrossTenantInventory.ps1 -PassThru | Where-Object Finding -notmatch '^(OK|HYBRID)'
 ```
 
 Exchange only, if you can't consent to the Graph scope:
@@ -147,7 +147,7 @@ Findings and partner overview to CSV:
 Only the serious ones:
 
 ```powershell
-./Get-CrossTenantAccessReview.ps1 | Where-Object Severity -eq 'HIGH'
+./Get-CrossTenantAccessReview.ps1 -PassThru | Where-Object Severity -eq 'HIGH'
 ```
 
 ## Requirements

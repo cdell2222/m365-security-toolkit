@@ -29,6 +29,10 @@
 .PARAMETER OutputPath
     Optional folder. Writes two timestamped CSVs there: findings and partner overview.
 
+.PARAMETER PassThru
+    Also return the results as objects, for filtering or further processing.
+    Without it, the script only prints the report.
+
 .EXAMPLE
     ./Get-CrossTenantAccessReview.ps1
 
@@ -36,7 +40,7 @@
     ./Get-CrossTenantAccessReview.ps1 -OutputPath ./reports
 
 .EXAMPLE
-    ./Get-CrossTenantAccessReview.ps1 | Where-Object Severity -eq 'HIGH'
+    ./Get-CrossTenantAccessReview.ps1 -PassThru | Where-Object Severity -eq 'HIGH'
 
 .NOTES
     Modules : Microsoft.Graph.Authentication
@@ -50,7 +54,8 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $OutputPath
+    [string] $OutputPath,
+    [switch] $PassThru
 )
 
 $ErrorActionPreference = 'Stop'
@@ -290,4 +295,4 @@ if ($OutputPath) {
     Write-Host "Written: $f2" -ForegroundColor Cyan
 }
 
-$sorted
+if ($PassThru) { $sorted }

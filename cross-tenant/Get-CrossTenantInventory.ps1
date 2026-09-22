@@ -30,6 +30,10 @@
 .PARAMETER OutputPath
     Optional folder. Writes the findings to a timestamped CSV there.
 
+.PARAMETER PassThru
+    Also return the results as objects, for filtering or further processing.
+    Without it, the script only prints the report.
+
 .PARAMETER SkipGraph
     Skip the Entra Cross-Tenant Access Policy check and report Exchange only.
     Useful if you can't consent to Policy.Read.All.
@@ -41,7 +45,7 @@
     ./Get-CrossTenantInventory.ps1 -OutputPath ./reports
 
 .EXAMPLE
-    ./Get-CrossTenantInventory.ps1 | Where-Object Finding -notmatch '^(OK|HYBRID)'
+    ./Get-CrossTenantInventory.ps1 -PassThru | Where-Object Finding -notmatch '^(OK|HYBRID)'
 
 .NOTES
     Modules : ExchangeOnlineManagement 3.x, Microsoft.Graph.Identity.SignIns
@@ -54,7 +58,8 @@
 [CmdletBinding()]
 param(
     [string] $OutputPath,
-    [switch] $SkipGraph
+    [switch] $SkipGraph,
+    [switch] $PassThru
 )
 
 $ErrorActionPreference = 'Stop'
@@ -210,4 +215,4 @@ if ($OutputPath) {
     Write-Host "Written: $file" -ForegroundColor Cyan
 }
 
-$results
+if ($PassThru) { $results }
