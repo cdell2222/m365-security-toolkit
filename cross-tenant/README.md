@@ -60,7 +60,7 @@ Exchange only, if you can't consent to the Graph scope:
 - `ExchangeOnlineManagement` 3.x
 - `Microsoft.Graph.Identity.SignIns`
 - Exchange: **View-Only Organization Management** is enough
-- Graph: **Policy.Read.All** — read-only
+- Graph: **Policy.Read.All** — read-only, needs admin consent once per tenant (see [Consent](#consent) below). Skip it with `-SkipGraph`.
 
 ## Known issue: `Method not found ... WithLogging`
 
@@ -155,6 +155,24 @@ Only the serious ones:
 - `Microsoft.Graph.Authentication` — Graph only, no Exchange module, so the MSAL conflict above doesn't apply
 - Graph: **Policy.Read.All** — read-only
 - Graph: **CrossTenantInformation.ReadBasic.All** — read-only, used only to turn tenant IDs into names. Without it, partners show as tenant IDs.
+- Entra role: **Security Reader** is the least-privileged role that can read Cross-Tenant Access Policy. Global Reader also works. Without a role, Graph returns 403.
+
+### Consent
+
+`Policy.Read.All` always needs **admin consent**, whatever your tenant's user consent settings are. A Security Reader can't grant it alone.
+
+- **Already granted** (someone has used Graph PowerShell with this scope before): nothing to do.
+- **Admin consent workflow enabled**: the user gets a "Need admin approval" screen and can submit a request. An admin approves it under *Entra → Enterprise apps → Admin consent requests*.
+- **Admin consent workflow disabled**: the user is blocked and has to ask an admin.
+- **"Assignment required" on Microsoft Graph Command Line Tools**: the user (or a group) must be assigned to that app first.
+
+The simplest fix is for a Global Administrator, Privileged Role Administrator or Cloud Application Administrator to run this once and tick *Consent on behalf of your organization*:
+
+```powershell
+Connect-MgGraph -Scopes Policy.Read.All, CrossTenantInformation.ReadBasic.All
+```
+
+After that, any Security Reader can run the script.
 
 ## What it doesn't cover
 

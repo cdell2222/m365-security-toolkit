@@ -43,6 +43,9 @@
     Graph   : Policy.Read.All                       (read-only)
               CrossTenantInformation.ReadBasic.All  (read-only, partner names only)
 
+    Role    : Security Reader (least privilege) or Global Reader
+    Consent : Policy.Read.All needs admin consent once per tenant - see README.
+
     Uses Graph only - no Exchange module, so no MSAL conflict.
 #>
 [CmdletBinding()]
