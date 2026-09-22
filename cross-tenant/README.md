@@ -11,7 +11,11 @@ Two read-only scripts covering how other tenants reach into yours.
 
 # Cross-tenant inventory
 
-Microsoft is moving cross-tenant Free/Busy, MailTips and calendar sharing out of Exchange organization relationships and into **Entra ID Cross-Tenant Access Policy** ([Exchange Team Blog, 11 Sep 2026](https://techcommunity.microsoft.com/t5/exchange-team-blog/cross-tenant-free-busy-mailtips-and-calendar-sharing-are-moving/ba-p/4545169), rolling out in stages).
+Microsoft is moving cross-tenant Free/Busy, MailTips and calendar sharing out of Exchange organization relationships, availability address spaces and sharing policies, and into **Microsoft 365 Cross-Tenant Access Policy**: a new capability layer on top of the Entra cross-tenant access partner entries ([Exchange Team Blog, 11 Sep 2026](https://techcommunity.microsoft.com/t5/exchange-team-blog/cross-tenant-free-busy-mailtips-and-calendar-sharing-are-moving/ba-p/4545169) · [migration guide](https://learn.microsoft.com/en-us/exchange/sharing/migrate-to-m365-xtap), rolling out in stages).
+
+Every partner you share with will need an Entra partner entry with *Microsoft 365 collaboration* trust, plus the specific capabilities (Free/Busy, MailTips, calendar sharing). Hybrid (your own on-premises Exchange) isn't covered by the new model yet.
+
+> **Current limits of this script:** it checks whether each partner has an Entra partner entry, not yet whether that entry has the Microsoft 365 collaboration trust and capabilities. It doesn't read sharing policies yet. Both are planned.
 
 Good change. It should have lived there all along — deciding which tenant can see your calendars is an identity trust decision, not a mail routing one.
 
