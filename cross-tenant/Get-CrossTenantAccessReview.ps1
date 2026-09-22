@@ -222,13 +222,15 @@ $overview = foreach ($p in $partners) {
     }
     if ($p.isServiceProvider) {
         Add-Finding INFO Partner $id $name 'isServiceProvider' `
-            'Marked as a service provider (e.g. GDAP / CSP). Confirm the relationship is current.'
+            'Service provider (CSP / GDAP). Confirm you still work with them - old resellers often keep their entry long after the contract ends. Check their GDAP relationship in the admin center too.'
     }
 
     $overrides = @('b2bCollaborationInbound', 'b2bCollaborationOutbound', 'b2bDirectConnectInbound',
                    'b2bDirectConnectOutbound', 'inboundTrust', 'tenantRestrictions') |
                  Where-Object { $null -ne $p.$_ }
-    if (-not $overrides -and -not $syncIn -and -not $autoRedeem -and $exists -ne $false) {
+    # Service-provider (CSP / GDAP) entries are created by Microsoft and normally override
+    # nothing - flagging them as empty is noise, the isServiceProvider INFO already covers them.
+    if (-not $overrides -and -not $syncIn -and -not $autoRedeem -and $exists -ne $false -and -not $p.isServiceProvider) {
         Add-Finding INFO Partner $id $name 'entry' `
             'Overrides nothing - every setting inherits the default. Either someone meant to configure it and did not, or it can go.'
     }

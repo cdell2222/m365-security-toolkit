@@ -41,7 +41,7 @@
     ./Get-CrossTenantInventory.ps1 -OutputPath ./reports
 
 .EXAMPLE
-    ./Get-CrossTenantInventory.ps1 | Where-Object Finding -ne 'OK'
+    ./Get-CrossTenantInventory.ps1 | Where-Object Finding -notmatch '^(OK|HYBRID)'
 
 .NOTES
     Modules : ExchangeOnlineManagement 3.x, Microsoft.Graph.Identity.SignIns
@@ -81,6 +81,12 @@ function Get-Finding {
 
     if (-not $Row.DomainResolves) {
         return 'STALE: domain no longer resolves to a Microsoft 365 tenant'
+    }
+    if ($Row.OwnTenant) {
+        # Exchange hybrid: the Hybrid Configuration Wizard creates an organization
+        # relationship between the cloud tenant and its own on-premises org. Same
+        # tenant ID on both sides - not cross-tenant, no CTAP partner entry applies.
+        return 'HYBRID: points to your own tenant (Exchange hybrid) - not cross-tenant'
     }
     if (-not $Row.RelationshipEnabled) {
         return 'DISABLED: relationship is off - candidate for removal'
@@ -140,6 +146,11 @@ if (-not (Get-ConnectionInformation -ErrorAction SilentlyContinue)) {
 
 # --- collect ---------------------------------------------------------------
 
+# Our own tenant ID, so the Exchange hybrid relationship isn't mistaken for a partner.
+$ownTenantId = @(Get-ConnectionInformation)[0].TenantID
+if (-not $ownTenantId -and -not $SkipGraph) { $ownTenantId = (Get-MgContext).TenantId }
+$ownTenantId = "$ownTenantId"
+
 $relationships = @(Get-OrganizationRelationship)
 Write-Host ("Found {0} organization relationship(s)." -f $relationships.Count) -ForegroundColor Cyan
 
@@ -153,6 +164,7 @@ $results = foreach ($rel in $relationships) {
             Domain              = "$domain"
             TenantId            = $tenantId
             DomainResolves      = [bool] $tenantId
+            OwnTenant           = [bool] ($tenantId -and $ownTenantId -and $tenantId -eq $ownTenantId)
             FreeBusyEnabled     = $rel.FreeBusyAccessEnabled
             FreeBusyLevel       = $rel.FreeBusyAccessLevel
             MailTipsEnabled     = $rel.MailTipsAccessEnabled
@@ -181,7 +193,7 @@ if (-not $SkipGraph) {
     Write-Host ('  CTAP partner entries       : {0}' -f $ctapPartners.Count)
 }
 
-$flagged = @($results | Where-Object Finding -ne 'OK')
+$flagged = @($results | Where-Object { $_.Finding -notmatch '^(OK|HYBRID)' })
 Write-Host ''
 if ($flagged.Count) {
     Write-Host ("{0} finding(s) need a look:" -f $flagged.Count) -ForegroundColor Yellow

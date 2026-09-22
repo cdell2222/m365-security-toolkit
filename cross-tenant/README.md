@@ -26,6 +26,7 @@ But if you've ever merged or split a tenant, you know these relationships pile u
 | `STALE` | The partner domain no longer resolves to any Microsoft 365 tenant. Usually a company you don't work with anymore — a standing trust nobody removed. |
 | `DISABLED` | The relationship exists but is switched off. Candidate for removal. |
 | `ACTION` | Shares Free/Busy, but there's no Cross-Tenant Access Policy partner entry for that tenant yet. Will need one. |
+| `HYBRID` | The relationship points to your own tenant. That's the one the Exchange Hybrid Configuration Wizard creates for your on-premises org. Not cross-tenant, nothing to do. |
 | `OK` | Nothing to flag. |
 
 It also counts availability address spaces and intra-organization connectors, since those tend to accumulate alongside.
@@ -45,7 +46,7 @@ Write the results to CSV:
 Only the things that need a look:
 
 ```powershell
-./Get-CrossTenantInventory.ps1 | Where-Object Finding -ne 'OK'
+./Get-CrossTenantInventory.ps1 | Where-Object Finding -notmatch '^(OK|HYBRID)'
 ```
 
 Exchange only, if you can't consent to the Graph scope:
@@ -126,8 +127,8 @@ They're usually switched on to make a pilot or a partner project work, and nobod
 | `MEDIUM` | Partner's device compliance or hybrid join is trusted |
 | `MEDIUM` | Partner's users can reach all your Teams shared channels |
 | `INFO` | Partner's MFA is trusted — usually deliberate, confirm it still holds |
-| `INFO` | Partner flagged as service provider (GDAP / CSP) |
-| `INFO` | Partner entry that overrides nothing — inherits every default |
+| `INFO` | Partner flagged as service provider (CSP / GDAP): confirm you still work with them, old resellers often keep their entry |
+| `INFO` | Partner entry that overrides nothing and inherits every default (service-provider entries excluded, those are normally empty) |
 
 It also prints the default policy posture and a one-line-per-partner overview: exists, MFA trusted, devices trusted, sync, auto-redeem.
 
