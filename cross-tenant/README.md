@@ -4,8 +4,8 @@ Two read-only scripts covering how other tenants reach into yours.
 
 | Script | Question it answers |
 |---|---|
-| [`Get-CrossTenantInventory.ps1`](#cross-tenant-inventory) | Which tenants can see our calendars, and are we ready for that to move into Entra? |
 | [`Get-CrossTenantAccessReview.ps1`](#cross-tenant-access-review) | Who can get in, and whose MFA and device decisions have we agreed to trust? |
+| [`Get-CrossTenantInventory.ps1`](#cross-tenant-inventory) | Which tenants can see our calendars, and are we ready for that to move into Entra? |
 
 ---
 
