@@ -323,6 +323,12 @@ $policyRows = @(foreach ($pol in $sharingPolicies) {
             elseif ($anonymous -or $wildcard) {
                 if     ($null -eq $caps)                                   { 'CHECK: this role cannot read Microsoft 365 capabilities - see the README' }
                 elseif (Test-Capability -Capabilities $caps -Name $needed) { 'READY: capability set on the default policy' }
+                elseif ($pol.Default) {
+                    # Every tenant ships with a default sharing policy covering '*' and
+                    # 'Anonymous'. Untouched, it means nothing - only worth migrating if
+                    # users actually share calendars outside the organization.
+                    "CHECK: Microsoft's out-of-the-box default sharing policy. Migrate only if your users really share calendars externally, then add $needed"
+                }
                 else                                                       { "ACTION: missing capability on the default policy - $needed" }
             }
             elseif (-not $tenantId)                          { 'STALE: domain no longer resolves to a Microsoft 365 tenant' }
@@ -360,15 +366,45 @@ if (-not $SkipGraph) {
     Write-Host ('  Entra partner entries      : {0}' -f $partners.Count)
 }
 
+function Write-Finding {
+    <# One block per item. Format-Table shreds long findings in a narrow window. #>
+    param([string] $Title, [string[]] $Detail, [string] $Finding)
+
+    $color = switch -regex ($Finding) {
+        '^ACTION'   { 'Yellow' }
+        '^STALE'    { 'Yellow' }
+        '^CHECK'    { 'Cyan' }
+        '^READY'    { 'Green' }
+        '^OK'       { 'Green' }
+        default     { 'Gray' }
+    }
+    Write-Host ''
+    Write-Host "  $Title" -ForegroundColor White
+    foreach ($d in $Detail) { if ($d) { Write-Host "    $d" -ForegroundColor Gray } }
+    Write-Host "    $Finding" -ForegroundColor $color
+}
+
 if ($sharing.Count) {
     Write-Host ''
     Write-Host 'Free/Busy and MailTips' -ForegroundColor White
-    $sharing | Format-Table Name, Domain, Shares, PartnerEntry, M365Trust, Finding -AutoSize -Wrap | Out-Host
+    foreach ($row in $sharing) {
+        $detail = @("shares : $($row.Shares)")
+        if (-not $SkipGraph -and $row.TenantId) {
+            $detail += "entra  : partner entry $(if ($row.PartnerEntry) { 'yes' } else { 'no' }), Microsoft 365 trust $(if ($row.M365Trust) { 'yes' } else { 'no' })"
+        }
+        if ($row.Needed) { $detail += "needs  : $($row.Needed)" }
+        Write-Finding -Title "$($row.Name)  [$($row.Domain)]" -Detail $detail -Finding $row.Finding
+    }
 }
 
 if ($policyRows.Count) {
+    Write-Host ''
     Write-Host 'Calendar sharing (sharing policies)' -ForegroundColor White
-    $policyRows | Format-Table Policy, Enabled, Domain, Level, Needed, Finding -AutoSize -Wrap | Out-Host
+    foreach ($row in $policyRows) {
+        $detail = @("shares : $($row.Domain) at $($row.Level)")
+        if ($row.Needed) { $detail += "needs  : $($row.Needed)" }
+        Write-Finding -Title "$($row.Policy)$(if (-not $row.Enabled) { ' (disabled)' })" -Detail $detail -Finding $row.Finding
+    }
 }
 
 Write-Host ''
