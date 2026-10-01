@@ -320,6 +320,12 @@ $policyRows = @(foreach ($pol in $sharingPolicies) {
             if     (-not $pol.Enabled) { 'DISABLED: policy is off' }
             elseif (-not $needed)      { "CHECK: no Microsoft 365 capability maps to '$level'" }
             elseif ($SkipGraph)        { 'CHECK: run without -SkipGraph to check the Microsoft 365 capabilities' }
+            elseif ($anonymous -and $level -eq 'CalendarSharingFreeBusyReviewer') {
+                # Anonymous publishing at Reviewer level means a user can publish a calendar
+                # to the open internet with subjects, attendees and locations. Worth knowing
+                # about whatever happens with EWS.
+                'CHECK: users can publish calendars anonymously with FULL details (subjects, attendees, locations). Consider lowering this to FreeBusySimple'
+            }
             elseif ($anonymous -or $wildcard) {
                 if     ($null -eq $caps)                                   { 'CHECK: this role cannot read Microsoft 365 capabilities - see the README' }
                 elseif (Test-Capability -Capabilities $caps -Name $needed) { 'READY: capability set on the default policy' }
@@ -389,10 +395,10 @@ if ($sharing.Count) {
     Write-Host 'Free/Busy and MailTips' -ForegroundColor White
     foreach ($row in $sharing) {
         $detail = @("shares : $($row.Shares)")
-        if (-not $SkipGraph -and $row.TenantId) {
+        if (-not $SkipGraph -and $row.TenantId -and $row.Finding -notlike 'HYBRID*') {
             $detail += "entra  : partner entry $(if ($row.PartnerEntry) { 'yes' } else { 'no' }), Microsoft 365 trust $(if ($row.M365Trust) { 'yes' } else { 'no' })"
         }
-        if ($row.Needed) { $detail += "needs  : $($row.Needed)" }
+        if ($row.Needed -and $row.Finding -notlike 'HYBRID*') { $detail += "needs  : $($row.Needed)" }
         Write-Finding -Title "$($row.Name)  [$($row.Domain)]" -Detail $detail -Finding $row.Finding
     }
 }

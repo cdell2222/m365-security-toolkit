@@ -34,7 +34,7 @@ For every sharing configuration it says what is shared today and whether the Mic
 | `STALE` | The partner domain no longer resolves to any Microsoft 365 tenant. Usually a company you don't work with anymore. |
 | `DISABLED` | Already switched off. Candidate for removal. |
 | `HYBRID` | Points at your own tenant: the relationship the Exchange Hybrid Configuration Wizard creates. Hybrid isn't covered by the new model yet. |
-| `CHECK` | Needs a manual look: an address space that can't migrate (`AccessMethod` other than `OrgWideFBToken`), a sharing level with no equivalent capability, or a role that can't read the capabilities. |
+| `CHECK` | Needs a manual look: anonymous calendar publishing set to full details (subjects, attendees, locations), an address space that can't migrate (`AccessMethod` other than `OrgWideFBToken`), a sharing level with no equivalent capability, or a role that can't read the capabilities. |
 
 It covers all three Exchange configurations Microsoft's guide lists:
 
