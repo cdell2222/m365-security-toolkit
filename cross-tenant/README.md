@@ -25,15 +25,26 @@ But if you've ever merged or split a tenant, you know these relationships pile u
 
 ## What it finds
 
+For every sharing configuration it says what is shared today and whether the Microsoft 365 capability that replaces it already exists.
+
 | Finding | Meaning |
 |---|---|
-| `STALE` | The partner domain no longer resolves to any Microsoft 365 tenant. Usually a company you don't work with anymore — a standing trust nobody removed. |
-| `DISABLED` | The relationship exists but is switched off. Candidate for removal. |
-| `ACTION` | Shares Free/Busy, but there's no Cross-Tenant Access Policy partner entry for that tenant yet. Will need one. |
-| `HYBRID` | The relationship points to your own tenant. That's the one the Exchange Hybrid Configuration Wizard creates for your on-premises org. Not cross-tenant, nothing to do. |
-| `OK` | Nothing to flag. |
+| `READY` | The partner has Microsoft 365 collaboration trust and the right capability. Nothing to do. |
+| `ACTION` | Something is missing: the Entra partner entry, the Microsoft 365 collaboration trust, or the capability itself. **This is what stops working when EWS is disabled.** |
+| `STALE` | The partner domain no longer resolves to any Microsoft 365 tenant. Usually a company you don't work with anymore. |
+| `DISABLED` | Already switched off. Candidate for removal. |
+| `HYBRID` | Points at your own tenant: the relationship the Exchange Hybrid Configuration Wizard creates. Hybrid isn't covered by the new model yet. |
+| `CHECK` | Needs a manual look: an address space that can't migrate (`AccessMethod` other than `OrgWideFBToken`), a sharing level with no equivalent capability, or a role that can't read the capabilities. |
 
-It also counts availability address spaces and intra-organization connectors, since those tend to accumulate alongside.
+It covers all three Exchange configurations Microsoft's guide lists:
+
+| Read with | What it is |
+|---|---|
+| `Get-OrganizationRelationship` | Free/Busy and MailTips sharing with other organizations |
+| `Get-AvailabilityAddressSpace` | Free/Busy through an address space. Only `OrgWideFBToken` can migrate |
+| `Get-SharingPolicy` | Calendar sharing per domain, including wildcard and anonymous publishing |
+
+The capability names it checks are Microsoft's own, for example `crossTenantCalendarAvailabilityLimitedDetails` for Free/Busy with subject and location, so the output tells you exactly what to create.
 
 ## Run it
 
@@ -63,9 +74,10 @@ Exchange only, if you can't consent to the Graph scope:
 
 - PowerShell 7
 - `ExchangeOnlineManagement` 3.x
-- `Microsoft.Graph.Identity.SignIns`
+- `Microsoft.Graph.Authentication`
 - Exchange: **View-Only Organization Management** is enough
-- Graph: **Policy.Read.All** — read-only, needs admin consent once per tenant (see [Consent](#consent) below). Skip it with `-SkipGraph`.
+- Graph: **Policy.Read.All** — read-only, needs admin consent once per tenant (see [Consent](#consent) below). Skip the Entra side with `-SkipGraph`.
+- Entra role: reading the Microsoft 365 capabilities needs **Global Administrator**, or **Exchange Administrator** for the Free/Busy, MailTips and calendar sharing ones. With a lesser role those checks report `CHECK` and the rest of the report still works.
 
 ## Known issue: `Method not found ... WithLogging`
 
