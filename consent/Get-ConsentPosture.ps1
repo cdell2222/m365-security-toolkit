@@ -139,6 +139,30 @@ if ($lowNames -contains 'offline_access') {
 $policy = Get-Graph -Uri 'v1.0/policies/adminConsentRequestPolicy'
 $reviewerScopes = @($policy.reviewers | ForEach-Object { "$($_.query)" })
 
+function Resolve-Reviewer {
+    <# Reviewer scopes are raw Graph queries. Turn them into names. #>
+    param([string] $Query)
+
+    if ($Query -match '/users/([0-9a-f-]{36})') {
+        $u = Get-Graph -Uri "v1.0/users/$($Matches[1])?`$select=displayName,userPrincipalName"
+        if ($u) { return "user: $($u.displayName)" }
+        return "user: $($Matches[1])"
+    }
+    if ($Query -match "roleDefinitionId eq '([0-9a-f-]{36})'") {
+        $r = Get-Graph -Uri "v1.0/roleManagement/directory/roleDefinitions/$($Matches[1])?`$select=displayName"
+        if ($r) { return "role: $($r.displayName)" }
+        return "role: $($Matches[1])"
+    }
+    if ($Query -match '/groups/([0-9a-f-]{36})') {
+        $g = Get-Graph -Uri "v1.0/groups/$($Matches[1])?`$select=displayName"
+        if ($g) { return "group: $($g.displayName)" }
+        return "group: $($Matches[1])"
+    }
+    return $Query
+}
+
+$reviewerNames = @($reviewerScopes | ForEach-Object { Resolve-Reviewer -Query $_ })
+
 if ($policy -and -not $policy.isEnabled) {
     if (-not $userGrant.Count) {
         Add-Finding HIGH 'Workflow' 'Users cannot consent AND cannot request. They hit a wall with no route - the point where people start using a personal account instead.'
@@ -160,16 +184,25 @@ if ($policy.isEnabled -and $singleUserReviewer.Count -eq 1 -and $reviewerScopes.
 
 # --- 4. the queue ----------------------------------------------------------
 
-$requests = Get-GraphAll -Uri 'v1.0/identityGovernance/appConsent/appConsentRequests?$expand=userConsentRequests'
+# $expand=userConsentRequests is accepted and then ignored by this endpoint: the
+# parent objects come back with no user requests, which looks like an empty queue.
+# The statuses and dates have to be fetched per request.
+$requests = Get-GraphAll -Uri 'v1.0/identityGovernance/appConsent/appConsentRequests'
 $queue = @()
 
 if ($null -eq $requests) {
     Add-Finding CHECK 'Queue' 'Could not read the consent request queue. ConsentRequest.Read.All is needed, and the workflow must have been enabled at some point.'
 }
 else {
+    Write-Host ("Reading {0} consent request(s)..." -f $requests.Count) -ForegroundColor Cyan
+    $i = 0
     $now = Get-Date
     $queue = foreach ($r in $requests) {
-        foreach ($u in @($r.userConsentRequests)) {
+        $i++
+        Write-Progress -Activity 'Reading consent requests' -Status "$i of $($requests.Count)" -PercentComplete ($i * 100 / [Math]::Max($requests.Count, 1))
+        $userReqs = Get-GraphAll -Uri "v1.0/identityGovernance/appConsent/appConsentRequests/$($r.id)/userConsentRequests"
+        if ($null -eq $userReqs) { $userReqs = @() }
+        foreach ($u in $userReqs) {
             $created = if ($u.createdDateTime) { [datetime] $u.createdDateTime } else { $null }
             [pscustomobject]@{
                 App       = "$($r.appDisplayName)"
@@ -183,6 +216,7 @@ else {
         }
     }
 
+    Write-Progress -Activity 'Reading consent requests' -Completed
     $pending = @($queue | Where-Object Status -eq 'InProgress')
     $stale   = @($pending | Where-Object { $_.AgeDays -gt 30 })
     $expired = @($queue | Where-Object Status -eq 'Expired')
@@ -216,7 +250,7 @@ Write-Host ''
 Write-Host 'Admin consent workflow' -ForegroundColor White
 if ($policy) {
     Write-Host ('  Enabled   : {0}' -f [bool] $policy.isEnabled)
-    Write-Host ('  Reviewers : {0}' -f $(if ($reviewerScopes.Count) { $reviewerScopes -join ', ' } else { 'none' }))
+    Write-Host ('  Reviewers : {0}' -f $(if ($reviewerNames.Count) { $reviewerNames -join ', ' } else { 'none' }))
     Write-Host ('  Notify    : {0}, reminders: {1}' -f [bool] $policy.notifyReviewers, [bool] $policy.remindersEnabled)
     Write-Host ('  Expires   : after {0} day(s)' -f $policy.requestDurationInDays)
 }

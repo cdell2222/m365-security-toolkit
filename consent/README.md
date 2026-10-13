@@ -60,6 +60,12 @@ If the consent request queue can't be read, the report says so and everything el
 
 A consent request that nobody answers is still an answer. The user asked for a tool, heard nothing, and either gave up or used it with a personal account. The second outcome leaves no record in your tenant at all.
 
+## A note on the Graph API
+
+`GET /identityGovernance/appConsent/appConsentRequests` accepts `$expand=userConsentRequests` and then ignores it: the parent objects come back with no user requests attached. Statuses and dates have to be fetched per request, which is what this script does. Expanding would have shown an empty queue in a tenant that had dozens of requests.
+
+Note also that the portal's **My Pending** queue shows only the requests waiting for *you*. The totals here cover every request in the tenant, which is usually a much larger number.
+
 ## Read-only
 
 Nothing is created, changed or removed.
