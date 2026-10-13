@@ -229,7 +229,15 @@ else {
         Add-Finding MEDIUM 'Queue' ("{0} request(s) have been pending longer than the {1}-day expiry. Check whether expiry is actually being applied." -f $stale.Count, $policy.requestDurationInDays)
     }
     if ($expired.Count) {
-        Add-Finding MEDIUM 'Queue' ("{0} request(s) expired without a decision. The user was refused by silence, and still needed the tool." -f $expired.Count)
+        $share = [int] (100 * $expired.Count / [Math]::Max($queue.Count, 1))
+        Add-Finding MEDIUM 'Queue' ("{0} of {1} request(s) expired without a decision - {2}% of everything ever asked. The user was refused by silence, and still needed the tool." -f $expired.Count, $queue.Count, $share)
+    }
+
+    # The same app asked for again and again is a demand signal, not a queue entry.
+    $repeat = @($queue | Group-Object App | Where-Object Count -ge 3 | Sort-Object Count -Descending)
+    if ($repeat.Count) {
+        $top = $repeat[0]
+        Add-Finding MEDIUM 'Queue' ("{0} app(s) were requested 3 times or more, the most frequent {1} times. People keep asking for the same tools - each new request restarts the expiry clock." -f $repeat.Count, $top.Count)
     }
 }
 
@@ -265,8 +273,17 @@ if ($queue.Count) {
         Write-Host ('  {0,-12}: {1}' -f $_.Name, $_.Count)
     }
     Write-Host ''
-    $queue | Sort-Object AgeDays -Descending | Select-Object -First 10 |
+    Write-Host '  Oldest requests' -ForegroundColor Gray
+    $queue | Sort-Object AgeDays -Descending | Select-Object -First 5 |
         Format-Table App, Status, AgeDays, Scopes -AutoSize -Wrap | Out-Host
+
+    $mostAsked = @($queue | Group-Object App | Sort-Object Count -Descending | Select-Object -First 5 | Where-Object Count -gt 1)
+    if ($mostAsked.Count) {
+        Write-Host '  Most requested' -ForegroundColor Gray
+        $mostAsked | Select-Object @{n='App';e={$_.Name}}, @{n='Requests';e={$_.Count}},
+            @{n='Statuses';e={ (@($_.Group.Status | Group-Object | ForEach-Object { '{0} {1}' -f $_.Count, $_.Name }) -join ', ') }} |
+            Format-Table -AutoSize -Wrap | Out-Host
+    }
 }
 
 $rank   = @{ HIGH = 0; MEDIUM = 1; CHECK = 2; INFO = 3 }
