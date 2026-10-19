@@ -8,6 +8,7 @@ Each one solves a specific problem I've run into in real environments — tenant
 
 | Folder | Tool | What it's for |
 |---|---|---|
+| [`ai-exposure/`](ai-exposure/) | `Get-AIAppGrants.ps1` | Which AI tools already hold access to your tenant: who consented, what scopes they hold, whether the publisher is verified, and when they last signed in. |
 | [`consent/`](consent/) | `Get-ConsentPosture.ps1` | Who can consent to apps and agent identities, what counts as low risk, and what happens to the requests nobody answers: pending, expired, and how old. |
 | [`cross-tenant/`](cross-tenant/) | `Get-CrossTenantAccessReview.ps1` | Review Entra Cross-Tenant Access Policy: guest and Teams shared-channel access, trusted external MFA and devices, cross-tenant sync, dead partner entries. |
 | [`cross-tenant/`](cross-tenant/) | `Get-CrossTenantInventory.ps1` | Find what breaks when EWS is disabled: Free/Busy, MailTips and calendar sharing that still run on Exchange organization relationships, address spaces and sharing policies, with the Microsoft 365 capability each one needs. |
