@@ -177,13 +177,17 @@ $rows = foreach ($g in $grantsByClient) {
 
     $isMicrosoft = ("$($sp.appOwnerOrganizationId)" -eq 'f8cdef31-a31e-4b4a-93e4-5f571e91255a') -or
                    ("$($sp.publisherName)" -match '^Microsoft')
+    # Agents built in your own tenant are governed through Entra Agent ID, not through
+    # a publisher. Treating them as unverified vendors is noise.
+    $isInternalAgent = ("$($sp.displayName)" -match '\(Microsoft Copilot Studio\)|\(Security Copilot\)|\(Azure AI Foundry\)')
     $isOwnTenant = ("$($sp.appOwnerOrganizationId)" -eq "$tenantId")
     $name        = "$($sp.displayName)"
     $looksAi     = ($name -match $AiPattern) -or ("$($sp.publisherName)" -match $AiPattern)
 
     if (-not $AllApps) {
         if (-not $looksAi) { continue }
-        if ($isOwnTenant)  { continue }   # your own registrations are not shadow IT
+        # Your own app registrations are not shadow IT. Agents built here are still worth seeing.
+        if ($isOwnTenant -and -not $isInternalAgent) { continue }
     }
 
     $scopes = @($g.Group | ForEach-Object { "$($_.scope)".Trim() -split '\s+' } | Where-Object { $_ } | Sort-Object -Unique)
@@ -195,6 +199,10 @@ $rows = foreach ($g in $grantsByClient) {
 
     [pscustomobject]@{
         App          = $name
+        Origin       = $(if ($isInternalAgent) { 'agent built here' }
+                         elseif ($isMicrosoft) { 'Microsoft' }
+                         elseif ($isOwnTenant) { 'own registration' }
+                         else { 'external vendor' })
         Publisher    = $(if ($sp.verifiedPublisher.displayName) { "$($sp.verifiedPublisher.displayName)" }
                          elseif ($sp.publisherName) { "$($sp.publisherName)" } else { '(none)' })
         Verified     = $verified
@@ -213,6 +221,16 @@ $rows = @($rows | Sort-Object { $_.RiskyScopes.Length } -Descending)
 
 foreach ($r in $rows) {
     if ($r.Microsoft) { continue }   # first-party Microsoft apps are a different conversation
+
+    if ($r.Origin -eq 'agent built here') {
+        if ($r.RiskyScopes) {
+            Add-Finding MEDIUM $r.App ("Agent built in this tenant, holding: {0}. Review it as an agent identity, not as a vendor app." -f $r.RiskyScopes)
+        }
+        else {
+            Add-Finding INFO $r.App 'Agent built in this tenant. Its permissions may also be inherited from its blueprint, which does not show here.'
+        }
+        continue
+    }
 
     if ($r.ConsentType -eq 'whole tenant' -and $r.RiskyScopes) {
         Add-Finding HIGH $r.App ("Consented for the whole tenant, holding: {0}. Every user's data is in scope, whether they use the tool or not." -f $r.RiskyScopes)
@@ -242,7 +260,7 @@ Write-Host ($(if ($AllApps) { 'Showing all of them, no filter' } else { "{0} of 
 
 if ($rows.Count) {
     Write-Host ''
-    $rows | Format-Table App, Publisher, Verified, ConsentType, LastSignIn, RiskyScopes -AutoSize -Wrap | Out-Host
+    $rows | Format-Table App, Origin, Publisher, ConsentType, LastSignIn, RiskyScopes -AutoSize -Wrap | Out-Host
 }
 else {
     Write-Host ''
